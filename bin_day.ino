@@ -1,3 +1,6 @@
+#include <WiFiManager.h>
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
 #include "HTTPSRedirect.h"
 #include <SPI.h>
 #include <ESP8266WiFi.h>
@@ -6,38 +9,30 @@
 #include <ArduinoOTA.h>
 #include <FastLED.h>
 
-const char* ssid = "TP-LINK_5A6B";
-const char* password = "43396153";
 const char* calendar_id = "AKfycbxdxppvk0O9S7zMECsDGRG2gpjgjt74SJt4UFd5jgZHIYr1bJk";
 
-#define NBR_EVENTS 4
+#define NBR_EVENTS 6
 #define UPDATETIME 3600000
 //#define UPDATETIME 30000
-
-#define BLACKBIN 0
-#define BLUEBIN 1
-
-#define YELLOW 2
-#define RED 3
 
 #define PULSE_DELAY 15
 
 #define OTA_NODE_NAME "BIN_01"
 #define OTA_PASSWORD "woowb2018"
 
-
 const int REDPIN   = D2;
 const int GREENPIN = D3;
 const int BLUEPIN  = D4;
 
-String possibleEvents[NBR_EVENTS] = {"black", "blue", "yellow", "red"};
-CRGB led_colour[NBR_EVENTS] = {
-  CRGB::White, 
-  CRGB::Blue,
-  CRGB::Yellow,
-  CRGB::Red
+String possibleEvents[NBR_EVENTS] = {"black", "blue", "yellow", "red", "green", "brown"};
+CHSV led_colour[NBR_EVENTS] = {
+  CHSV(192, 0, 255), 
+  CHSV(160, 255, 255),
+  CHSV(64, 255, 255),
+  CHSV(0, 255, 255),
+  CHSV(96, 255, 255),
+  CHSV(192, 255, 255)
  };
-byte led_off[3] = {0, 0, 0};
 
 //Connection Settings
 const char* host = "script.google.com";
@@ -59,16 +54,9 @@ void setColour(const CRGB& colour) {
 }
 
 void connectToWiFi() {
-  Serial.printf("Connecting to %s ", ssid);
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-
-  Serial.print(" connected ");
-  Serial.println(WiFi.localIP());
+  WiFiManager wfm;
+  // wfm.resetSettings();
+  wfm.autoConnect("BinDay");
 }
 
 String getCalendar() {
@@ -113,16 +101,10 @@ void manageStatus(String calendarData) {
   }
 }
 
-void fadeWhite() {
-  for (int i = 512; i >= 0; i--) {
-    setColour( CHSV(255, 0, sin8(i)));
-    delay(PULSE_DELAY);
-  }
-}
-
-void fadeBlue() {
-  for (int i = 512; i >= 0; i--) {
-    setColour( CHSV(160, 255, sin8(i)) );
+void fade(CHSV colour) {
+  for(int i = 0; i <= 512; i++) {
+    colour.value = sin8(i);
+    setColour(colour);
     delay(PULSE_DELAY);
   }
 }
@@ -182,14 +164,8 @@ void loop() {
     entryUpdated = millis();
   }
 
-  switch (binDay) {
-    case BLACKBIN:
-      fadeWhite();
-      break;
-    case BLUEBIN:
-      fadeBlue();
-      break;
-
+  if(binDay >= 0) {
+    fade(led_colour[binDay]);
   }
 
   delay(10);
